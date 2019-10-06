@@ -259,14 +259,22 @@ public class SpringApplication {
 	 * @see #run(Class, String[])
 	 * @see #setSources(Set)
 	 */
+	/**
+	 *初始化：
+	 *
+	 */
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public SpringApplication(ResourceLoader resourceLoader, Class<?>... primarySources) {
 		this.resourceLoader = resourceLoader;
 		Assert.notNull(primarySources, "PrimarySources must not be null");
 		this.primarySources = new LinkedHashSet<>(Arrays.asList(primarySources));
+		//1 设置web环境类型（webFlux : webMVC）
 		this.webApplicationType = WebApplicationType.deduceFromClasspath();
+		//2 读取初始化器(spring.fatories)
 		setInitializers((Collection) getSpringFactoriesInstances(
 				ApplicationContextInitializer.class));
+
+		//3 读取listeners(spring.fatories)
 		setListeners((Collection) getSpringFactoriesInstances(ApplicationListener.class));
 		this.mainApplicationClass = deduceMainApplicationClass();
 	}
@@ -293,16 +301,20 @@ public class SpringApplication {
 	 * @return a running {@link ApplicationContext}
 	 */
 	public ConfigurableApplicationContext run(String... args) {
+		//时间监控
 		StopWatch stopWatch = new StopWatch();
 		stopWatch.start();
 		ConfigurableApplicationContext context = null;
 		Collection<SpringBootExceptionReporter> exceptionReporters = new ArrayList<>();
-		configureHeadlessProperty();
+		configureHeadlessProperty();//java.awt.headless是J2SE的一种模式用于在缺少显示屏、键盘或者鼠标时的系统配置，很多监控工具如jconsole 需要将该值设置为true，系统变量默认为true
+		//1 获取并启动监听器----->会触发EventPublishingRunListener的构造函数
 		SpringApplicationRunListeners listeners = getRunListeners(args);
-		listeners.starting();
+		listeners.starting();//--->发布starting事件
 		try {
+			//封装命令行参数
 			ApplicationArguments applicationArguments = new DefaultApplicationArguments(
 					args);
+			//2 创建environment并出来配置文件----->
 			ConfigurableEnvironment environment = prepareEnvironment(listeners,
 					applicationArguments);
 			configureIgnoreBeanInfo(environment);
@@ -341,11 +353,14 @@ public class SpringApplication {
 	private ConfigurableEnvironment prepareEnvironment(
 			SpringApplicationRunListeners listeners,
 			ApplicationArguments applicationArguments) {
-		// Create and configure the environment
+		// 1 创建environment----->
 		ConfigurableEnvironment environment = getOrCreateEnvironment();
+		// 2 配置environment----->添加命令行参数到environment
 		configureEnvironment(environment, applicationArguments.getSourceArgs());
+		// 3 发布事件---->一个重要的监听器ConfigFileApplicationListener，用来处理配置文件
 		listeners.environmentPrepared(environment);
 		bindToSpringApplication(environment);
+		// 4 绑定environment到当前类
 		if (!this.isCustomEnvironment) {
 			environment = new EnvironmentConverter(getClassLoader())
 					.convertEnvironmentIfNecessary(environment, deduceEnvironmentClass());
@@ -412,6 +427,7 @@ public class SpringApplication {
 
 	private SpringApplicationRunListeners getRunListeners(String[] args) {
 		Class<?>[] types = new Class<?>[] { SpringApplication.class, String[].class };
+		//----->getSpringFactoriesInstances
 		return new SpringApplicationRunListeners(logger, getSpringFactoriesInstances(
 				SpringApplicationRunListener.class, types, this, args));
 	}
@@ -426,12 +442,14 @@ public class SpringApplication {
 		// Use names and ensure unique to protect against duplicates
 		Set<String> names = new LinkedHashSet<>(
 				SpringFactoriesLoader.loadFactoryNames(type, classLoader));
+		//整个SpringBoot 框架中获取factories的方式统一如下------>
 		List<T> instances = createSpringFactoriesInstances(type, parameterTypes,
 				classLoader, args, names);
 		AnnotationAwareOrderComparator.sort(instances);
 		return instances;
 	}
 
+	//整个SpringBoot 框架中获取factories的方式统一如下
 	@SuppressWarnings("unchecked")
 	private <T> List<T> createSpringFactoriesInstances(Class<T> type,
 			Class<?>[] parameterTypes, ClassLoader classLoader, Object[] args,
@@ -439,11 +457,15 @@ public class SpringApplication {
 		List<T> instances = new ArrayList<>(names.size());
 		for (String name : names) {
 			try {
+				//装载class文件到内存
 				Class<?> instanceClass = ClassUtils.forName(name, classLoader);
 				Assert.isAssignable(type, instanceClass);
 				Constructor<?> constructor = instanceClass
 						.getDeclaredConstructor(parameterTypes);
+				//主要通过反射创建实例
 				T instance = (T) BeanUtils.instantiateClass(constructor, args);
+				//如果类型是EventPublishingRunListener，上面通过反射获取实例时会触发EventPublishingRunListener的构造函数
+				//------>EventPublishingRunListener
 				instances.add(instance);
 			}
 			catch (Throwable ex) {
@@ -459,9 +481,9 @@ public class SpringApplication {
 			return this.environment;
 		}
 		switch (this.webApplicationType) {
-		case SERVLET:
+		case SERVLET://webMVC
 			return new StandardServletEnvironment();
-		case REACTIVE:
+		case REACTIVE://webFlux  响应式编程
 			return new StandardReactiveWebEnvironment();
 		default:
 			return new StandardEnvironment();

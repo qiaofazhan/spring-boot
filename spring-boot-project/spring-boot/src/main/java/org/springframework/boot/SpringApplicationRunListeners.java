@@ -44,6 +44,7 @@ class SpringApplicationRunListeners {
 	}
 
 	public void starting() {
+		//本质就是观察者模式  触发事件监听
 		for (SpringApplicationRunListener listener : this.listeners) {
 			listener.starting();
 		}

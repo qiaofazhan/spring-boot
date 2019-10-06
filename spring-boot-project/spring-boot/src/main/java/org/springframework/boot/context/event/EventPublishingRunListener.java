@@ -42,14 +42,15 @@ import org.springframework.util.ErrorHandler;
  * @author Andy Wilkinson
  * @author Artsiom Yudovin
  */
+/*
+ 用于SpringBoot相关的启动事件，并将其转化为标准的spring事件，并发布标准的spring事件。
+ */
 public class EventPublishingRunListener implements SpringApplicationRunListener, Ordered {
-
 	private final SpringApplication application;
-
 	private final String[] args;
-
 	private final SimpleApplicationEventMulticaster initialMulticaster;
-
+	//读取spring.factories文件，并通过反射创建实例时，触发。注册标准的spring监听器
+	//注意，这里注册的监听器是指在spring.factories文件中配置的标准的spring监听器,例如LoggingApplicationListener
 	public EventPublishingRunListener(SpringApplication application, String[] args) {
 		this.application = application;
 		this.args = args;
@@ -58,24 +59,18 @@ public class EventPublishingRunListener implements SpringApplicationRunListener,
 			this.initialMulticaster.addApplicationListener(listener);
 		}
 	}
-
 	@Override
-	public int getOrder() {
-		return 0;
-	}
-
-	@Override
-	public void starting() {
+	public void starting() {//注册starting事件
+		//------>
 		this.initialMulticaster.multicastEvent(
+				//------>标准的spring事件
 				new ApplicationStartingEvent(this.application, this.args));
 	}
-
 	@Override
 	public void environmentPrepared(ConfigurableEnvironment environment) {
 		this.initialMulticaster.multicastEvent(new ApplicationEnvironmentPreparedEvent(
 				this.application, this.args, environment));
 	}
-
 	@Override
 	public void contextPrepared(ConfigurableApplicationContext context) {
 		this.initialMulticaster.multicastEvent(new ApplicationContextInitializedEvent(
@@ -96,16 +91,18 @@ public class EventPublishingRunListener implements SpringApplicationRunListener,
 
 	@Override
 	public void started(ConfigurableApplicationContext context) {
+		//----->本质也是通过SimpleApplicationEventMulticaster来发布事件
 		context.publishEvent(
 				new ApplicationStartedEvent(this.application, this.args, context));
 	}
 
+	//发布ApplicationReadyEvent事件
 	@Override
 	public void running(ConfigurableApplicationContext context) {
+		//----->本质也是通过SimpleApplicationEventMulticaster来发布事件
 		context.publishEvent(
 				new ApplicationReadyEvent(this.application, this.args, context));
 	}
-
 	@Override
 	public void failed(ConfigurableApplicationContext context, Throwable exception) {
 		ApplicationFailedEvent event = new ApplicationFailedEvent(this.application,
@@ -113,6 +110,7 @@ public class EventPublishingRunListener implements SpringApplicationRunListener,
 		if (context != null && context.isActive()) {
 			// Listeners have been registered to the application context so we should
 			// use it at this point if we can
+			//----->本质也是通过SimpleApplicationEventMulticaster来发布事件
 			context.publishEvent(event);
 		}
 		else {
@@ -139,5 +137,8 @@ public class EventPublishingRunListener implements SpringApplicationRunListener,
 		}
 
 	}
-
+	@Override
+	public int getOrder() {
+		return 0;
+	}
 }
