@@ -167,19 +167,23 @@ public class ConfigFileApplicationListener
 			onApplicationPreparedEvent(event);
 		}
 	}
-
+	//SpringBoot处理配置文件入口
 	private void onApplicationEnvironmentPreparedEvent(
 			ApplicationEnvironmentPreparedEvent event) {
+		//1.读取spring.factories,获取EnvironmentPostProcessor  ---->
 		List<EnvironmentPostProcessor> postProcessors = loadPostProcessors();
+		//2.该类本身也是一个EnvironmentPostProcessor
 		postProcessors.add(this);
 		AnnotationAwareOrderComparator.sort(postProcessors);
 		for (EnvironmentPostProcessor postProcessor : postProcessors) {
+			//3.执行   处理配置文件
 			postProcessor.postProcessEnvironment(event.getEnvironment(),
 					event.getSpringApplication());
 		}
 	}
 
 	List<EnvironmentPostProcessor> loadPostProcessors() {
+		// 加载spring.factories中的EnvironmentPostProcessor
 		return SpringFactoriesLoader.loadFactories(EnvironmentPostProcessor.class,
 				getClass().getClassLoader());
 	}
