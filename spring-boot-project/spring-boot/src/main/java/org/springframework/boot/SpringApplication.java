@@ -646,7 +646,7 @@ public class SpringApplication {
 			}
 		}
 		//创建容器实例AnnotationConfigServletWebServerApplicationContext
-		//注意：在 springBoot2版本以后才改名为 AnnotationConfigServletWebServerApplicationContext。
+		//注意：在 springBoot2版本以后才改名为 AnnotationConfigServletWebServerApplicationContext。1.x中是EmbeddedWebApplicationContext或者AnnotationConfigEmbeddedWebApplicationContext
 		return (ConfigurableApplicationContext) BeanUtils.instantiateClass(contextClass);
 	}
 

@@ -43,9 +43,16 @@ class TomcatStarter implements ServletContainerInitializer {
 	private volatile Exception startUpException;
 
 	TomcatStarter(ServletContextInitializer[] initializers) {
+		//ServletContainerInitializer!!!  很重要的一个接口
+		//------->this.onStartup
 		this.initializers = initializers;
 	}
 
+	//什么时候调用？？？参考：http://www.bubuko.com/infodetail-2963130.html
+	//通过SPI机制，web容器在启动时会扫描所有ServletContainerInitializer的实现,并调用其onStartup方法.
+	//扫描的方法为在所有jar包下查找路径为META-INF/services/ServletContainerInitializer文件,根据文件内的全路径进行实例化.
+	//因此，org.springframework.web（spring-web模块）下就有这样一个文件:SpringServletContainerInitializer
+	//调用时机就在SpringServletContainerInitializer中。
 	@Override
 	public void onStartup(Set<Class<?>> classes, ServletContext servletContext)
 			throws ServletException {

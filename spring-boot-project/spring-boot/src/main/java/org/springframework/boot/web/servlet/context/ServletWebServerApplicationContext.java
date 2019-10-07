@@ -147,10 +147,14 @@ public class ServletWebServerApplicationContext extends GenericWebApplicationCon
 		}
 	}
 
+	/*  onRefresh()在Spring容器实例化Bean之前调用，参考AbstractApplicationContext的refresh()方法
+	创建Servert容器，注册Servlet3大组件（Servert、Listener、Filter）
+	 */
 	@Override
 	protected void onRefresh() {
 		super.onRefresh();
 		try {
+			//------>创建并启动web容器
 			createWebServer();
 		}
 		catch (Throwable ex) {
@@ -160,9 +164,10 @@ public class ServletWebServerApplicationContext extends GenericWebApplicationCon
 
 	@Override
 	protected void finishRefresh() {
-		super.finishRefresh();
+		super.finishRefresh();//发布Spring容器启动事件
 		WebServer webServer = startWebServer();
 		if (webServer != null) {
+			//发布Servlet容器启动事件
 			publishEvent(new ServletWebServerInitializedEvent(webServer, this));
 		}
 	}
@@ -177,11 +182,14 @@ public class ServletWebServerApplicationContext extends GenericWebApplicationCon
 		WebServer webServer = this.webServer;
 		ServletContext servletContext = getServletContext();
 		if (webServer == null && servletContext == null) {
+			//-------->TomcatServletWebServerFactory;通过tomcat自动配置模块生成的TomcatServletWebServerFactory实例。
 			ServletWebServerFactory factory = getWebServerFactory();
+			//ServletContextInitializer触发逻辑------>getSelfInitializer()
+			// 创建容器  getWebServer----->TomcatServletWebServerFactory
 			this.webServer = factory.getWebServer(getSelfInitializer());
-		}
-		else if (servletContext != null) {
+		} else if (servletContext != null) {//一般不会走这个分支
 			try {
+				//------>onStartup()
 				getSelfInitializer().onStartup(servletContext);
 			}
 			catch (ServletException ex) {
@@ -223,7 +231,24 @@ public class ServletWebServerApplicationContext extends GenericWebApplicationCon
 	 * @see #prepareWebApplicationContext(ServletContext)
 	 */
 	private org.springframework.boot.web.servlet.ServletContextInitializer getSelfInitializer() {
+		//--------->selfInitialize()
 		return this::selfInitialize;
+		//上面这行代码不容易理解，其实就是匿名内部类，等同于下面这些代码.
+		//return new ServletContextInitializer(){}
+//		return (servletContext) -> {
+//			prepareWebApplicationContext(servletContext);
+//			registerApplicationScope(servletContext);
+//			WebApplicationContextUtils.registerEnvironmentBeans(getBeanFactory(),
+//					servletContext);
+//			for (ServletContextInitializer beans : getServletContextInitializerBeans()) {
+//				beans.onStartup(servletContext);
+//			}
+//		};
+		/**也就是说，这里其实还没有调用selfInitialize方法（因为只是new 了一个ServletContextInitializer，还没调用onStartup方法）。
+		* 那么什么时候调用onStartup方法呢？
+		*  当然是创建Tomcat并启动Tomcat后，通过钩子函数进行回调的。
+		*@see {@link TomcatServletWebServerFactory.getWebServer(ServletContextInitializer[])}
+		*/
 	}
 
 	private void selfInitialize(ServletContext servletContext) throws ServletException {
@@ -231,7 +256,11 @@ public class ServletWebServerApplicationContext extends GenericWebApplicationCon
 		registerApplicationScope(servletContext);
 		WebApplicationContextUtils.registerEnvironmentBeans(getBeanFactory(),
 				servletContext);
+		/*Servlet、filter、listener等会在Spring容器中先被统一注册为ServletContextInitializer。参考getServletContextInitializerBeans
+		-------->onStartup方法会将ServletContextInitializer注册到Servlet容器中
+		 */
 		for (ServletContextInitializer beans : getServletContextInitializerBeans()) {
+			//----->RegistrationBean.onStartup
 			beans.onStartup(servletContext);
 		}
 	}

@@ -51,6 +51,7 @@ public abstract class RegistrationBean implements ServletContextInitializer, Ord
 					+ " was not registered (disabled)");
 			return;
 		}
+		//------>
 		register(description, servletContext);
 	}
 
@@ -65,6 +66,9 @@ public abstract class RegistrationBean implements ServletContextInitializer, Ord
 	 * @param description a description of the item being registered
 	 * @param servletContext the servlet context
 	 */
+	//---->
+	//ServletListenerRegistrationBean用于组成ServletListener
+	//DynamicRegistrationBean用于注册Filter和Servlet
 	protected abstract void register(String description, ServletContext servletContext);
 
 	/**

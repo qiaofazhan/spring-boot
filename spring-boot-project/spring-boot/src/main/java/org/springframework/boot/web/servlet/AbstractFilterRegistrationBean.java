@@ -220,6 +220,7 @@ public abstract class AbstractFilterRegistrationBean<T extends Filter>
 	@Override
 	protected Dynamic addRegistration(String description, ServletContext servletContext) {
 		Filter filter = getFilter();
+		//---->递归注册Filter。参考Jetty实现的ServletContextHandler
 		return servletContext.addFilter(getOrDeduceName(filter), filter);
 	}
 
